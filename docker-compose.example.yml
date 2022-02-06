@@ -1,0 +1,72 @@
+version: '3.9'
+services:
+  mariadb: 
+    container_name: 'mariadb'
+    image: mariadb:10.7.1
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: 'root'
+    volumes:
+      - ./.docker-conf/mariadb/db:/var/lib/mysql
+      - ./.docker-conf/mariadb/conf.d:/etc/my.cnf.d
+      - ./.docker-conf/mariadb/logs:/var/log/mariadb
+    restart: always
+    networks:
+      - local
+  
+  nginx:
+    container_name: nginx
+    image: nginx:1.21.6-alpine
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./www:/usr/share/nginx/html
+      - ./.docker-conf/nginx/conf.d:/etc/nginx/conf.d
+      - ./.docker-conf/nginx/logs:/var/log/nginx
+    depends_on:
+      - mariadb
+      - redis 
+      - php
+    restart: always
+    networks:
+      - local
+
+  php:
+    container_name: php
+    image: php:8.1-fpm
+    volumes:
+      - ./www:/usr/share/nginx/html
+      - ./.docker-conf/php/php.ini:/usr/local/etc/php/php.ini
+      - ./.docker-conf/php/logs:/usr/local/var/log
+    restart: always
+    networks:
+      - local
+
+  redis:
+    container_name: redis
+    image: redis:6.2.6-alpine
+    ports:
+      - 6379:6379
+    volumes:
+      - ./.docker-conf/redis/db:/var/lib/redis
+      - ./.docker-conf/redis/logs:/var/log/redis
+    restart: always
+    networks:
+      - local
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.9-management-alpine
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+
+
+networks:
+  local:
+    driver: bridge
